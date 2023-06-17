@@ -3,8 +3,6 @@
 #######   Generate BERTopic Topics for Unprocessed Twitter Data   #####
 #######################################################################
 """
-import sys
-sys.path.append('/Users/timdouglas/Desktop/MPhil:PhD CompSci @ UCL/css_proj/')
 import pandas as pd
 import numpy as np
 import re
@@ -442,8 +440,6 @@ class generate_topics:
         write_pickle_dic(embeddings, self._dir + '/BERTopic/{}/{}_embeddings'.format(self.community, self.community))
 
         return None
-
-dummy=0
 
 """
 Instantiate generate_topics class and work through the following steps to obtain
