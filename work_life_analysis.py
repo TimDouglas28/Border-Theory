@@ -3,9 +3,6 @@
 #######   Work-Life Tweet Activity Analysis of BERTopic Topics    #####
 #######################################################################
 """
-
-import sys
-sys.path.append('/Users/timdouglas/Desktop/MPhil:PhD CompSci @ UCL/css_proj/')
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.transforms as mtransforms
@@ -1268,8 +1265,6 @@ class work_life_analysis:
             return y, l3_months, w, l3_thresh,
         elif all_lockdown_info:
             return [[y, l1_months, w, l1_thresh], [y, l2_months, w, l2_thresh], [y, l3_months, w, l3_thresh]]
-        
-debug = 0
 
 """
 Instantiate topic_analysis class below
@@ -1277,7 +1272,7 @@ Instantiate topic_analysis class below
 
 # 0. Initialise instance variables
 # NB: Choose which community to run the analysis on
-community = 'ScottishTeachers' # ScottishTeachers # IrishTeachers # Journalists
+community = 'Journalists' # ScottishTeachers # IrishTeachers # Journalists
 _dir = '/Users/timdouglas/Desktop/MPhil:PhD CompSci @ UCL/css_proj/'
 bertmodel = BERTopic.load(_dir + '/BERTopic/{}/{}_nouns_model'.format(community, community))
 tweets = read_pickle_dic(_dir + '/BERTopic/{}/{}_tweets'.format(community, community))
