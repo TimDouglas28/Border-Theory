@@ -12,9 +12,7 @@ from pathlib import Path
 from bertopic import BERTopic
 from collections import defaultdict
 from textblob import TextBlob
-# from utils_calculations.utils import data_preprocessing
 from sklearn.feature_extraction.text import CountVectorizer
-# from utils_calculations.utils import read_pickle_dic, write_pickle_dic
 from sentence_transformers import SentenceTransformer
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
