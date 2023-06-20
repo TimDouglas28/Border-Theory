@@ -7,13 +7,14 @@ import pandas as pd
 import numpy as np
 import re
 import nltk
+import pickle
 from pathlib import Path
 from bertopic import BERTopic
 from collections import defaultdict
 from textblob import TextBlob
-from utils_calculations.utils import data_preprocessing
+# from utils_calculations.utils import data_preprocessing
 from sklearn.feature_extraction.text import CountVectorizer
-from utils_calculations.utils import read_pickle_dic, write_pickle_dic
+# from utils_calculations.utils import read_pickle_dic, write_pickle_dic
 from sentence_transformers import SentenceTransformer
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
@@ -55,7 +56,7 @@ class generate_topics:
     def filter_users(self, threshold):
         """
         For a given community, read the raw Twitter data into a Pandas
-        dataframe and filter out users who tweets >= some threshold value
+        dataframe and filter out users who tweets <= some threshold value
         throughout the entire period of the tweets.
  
         Parameters
@@ -67,12 +68,12 @@ class generate_topics:
             None
         """
 
-        df = pd.read_csv(self._dir+'data/csvs/{}.csv'.format(self.community), low_memory=False)
+        df = pd.read_csv(self._dir+'{}.csv'.format(self.community), low_memory=False)
         count = df[['author_id', 'tweet']].groupby(['author_id']).agg({'tweet': ['count']})
         count_thresh = count[(count[('tweet', 'count')] >= threshold)] 
         ids_list = list(count_thresh.index)
         df1 = df[df['author_id'].isin(ids_list)]
-        df1.to_csv(self._dir+'data/csvs/unprocessed_tweets_{}_filt.csv'.format(self.community))
+        df1.to_csv(self._dir+'unprocessed_tweets_{}_filt.csv'.format(self.community))
 
         return None
 
@@ -91,7 +92,7 @@ class generate_topics:
             None
         """
 
-        df = pd.read_csv(self._dir+'data/csvs/unprocessed_tweets_{}_filt.csv'.format(self.community))
+        df = pd.read_csv(self._dir+'unprocessed_tweets_{}_filt.csv'.format(self.community))
         # 1. Drop nans from created_at_year column.
         df = df.dropna(subset=['created_at_year'])
         # 2. Clean the data
@@ -102,7 +103,7 @@ class generate_topics:
         # 3. Extract active members
         df_active_members = df[df.groupby('author_id')['created_at_year'].
         transform(lambda x : {2019, 2020, 2021, 2022}.issubset(set(x)))].sort_values(['author_id', 'created_at_year'])
-        df_active_members.to_csv(self._dir+'data/csvs/unprocessed_{}_tweets_active_members.csv'.format(self.community))
+        df_active_members.to_csv(self._dir+'unprocessed_{}_tweets_active_members.csv'.format(self.community))
 
         return df_active_members
 
@@ -136,7 +137,7 @@ class generate_topics:
         teacher_keys = [key for key, value in desc_dict.items() for x in filter_list if x in value]
         # teacher_keys = [int(x) for x in teacher_keys]
         filtered_members = members_df[members_df['author_id'].isin(teacher_keys)]
-        filtered_members.to_csv(self._dir+'data/csvs/unprocessed_{}_tweets_active_members*.csv'.format(self.community))
+        filtered_members.to_csv(self._dir+'unprocessed_{}_tweets_active_members*.csv'.format(self.community))
 
         return filtered_members
 
@@ -241,7 +242,7 @@ class generate_topics:
 
         # 1. Read in the tweets for self-declared professionals as a csv.
         activemembers_df = pd.read_csv(
-            self._dir+'data/csvs/unprocessed_{}_tweets_active_members*.csv'.format(self.community), 
+            self._dir+'unprocessed_{}_tweets_active_members*.csv'.format(self.community), 
             usecols=['author_id', 'tweet_id', 'tweet', 'created_at'] 
         ) 
 
@@ -250,8 +251,8 @@ class generate_topics:
 
         # 3. Store the tokenized data. 
         # Create a [community] path if it exists, else do nothing
-        Path(self._dir + 'data/pickles/study/{}/BERTopic_input_data'.format(self.community)).mkdir(parents=True, exist_ok=True)
-        write_pickle_dic(tokens_list, self._dir + 'data/pickles/study/{}/BERTopic_input_data/tokens_list'.format(self.community))
+        Path(self._dir + 'pickles/{}/BERTopic_input_data'.format(self.community)).mkdir(parents=True, exist_ok=True)
+        self.write_pickle_dic(tokens_list, self._dir + 'pickles/{}/BERTopic_input_data/tokens_list'.format(self.community))
         
         return activemembers_df
     
@@ -272,7 +273,7 @@ class generate_topics:
         """
 
         # 1. Read in the pickle file containing the tokenized tweets and add toa column in activemembers_df
-        tokens_list = read_pickle_dic(self._dir + 'data/pickles/study/{}/BERTopic_input_data/tokens_list'.format(self.community))
+        tokens_list = self.read_pickle_dic(self._dir + 'pickles/{}/BERTopic_input_data/tokens_list'.format(self.community))
         activemembers_df['token_list'] = tokens_list
         activemembers_df['token_list'].replace([], np.nan, inplace=True)
         activemembers_df.dropna(subset=['token_list'], inplace=True)
@@ -299,8 +300,8 @@ class generate_topics:
         activemembers_df.dropna(subset=['token_nouns'], inplace=True)
 
         # 3. Save result
-        Path(self._dir + 'data/csvs/BERTopic/{}'.format(self.community)).mkdir(parents=True, exist_ok=True)
-        activemembers_df.to_csv(self._dir + 'data/csvs/BERTopic/{}/{}_nouns_truncated.csv'.format(self.community, self.community))
+        Path(self._dir + '{}'.format(self.community)).mkdir(parents=True, exist_ok=True)
+        activemembers_df.to_csv(self._dir + '{}/{}_nouns_truncated.csv'.format(self.community, self.community))
 
         return None
 
@@ -319,7 +320,7 @@ class generate_topics:
 
         # 1. Read in the extracted nouns csv as a Pandas DataFrame.
         df = pd.read_csv(
-            self._dir+'data/csvs/BERTopic/{}/{}_nouns_truncated.csv'.format(self.community, self.community),
+            self._dir+'{}/{}_nouns_truncated.csv'.format(self.community, self.community),
             usecols=['author_id', 'tweet_id', 'created_at', 'token_nouns'],
         ) 
 
@@ -432,14 +433,55 @@ class generate_topics:
         -------
             None
         """
-        Path(self._dir + '/BERTopic/{}'.format(self.community)).mkdir(parents=True, exist_ok=True)
-        topic_model.save(self._dir + '/BERTopic/{}/{}_nouns_model'.format(self.community, self.community))
-        write_pickle_dic(tweets, self._dir + '/BERTopic/{}/{}_tweets'.format(self.community, self.community))
-        write_pickle_dic(topics, self._dir + '/BERTopic/{}/{}_topics'.format(self.community, self.community))
-        write_pickle_dic(timestamps, self._dir + '/BERTopic/{}/{}_timestamps'.format(self.community, self.community))
-        write_pickle_dic(embeddings, self._dir + '/BERTopic/{}/{}_embeddings'.format(self.community, self.community))
+        Path(self._dir + 'BERTopic/{}'.format(self.community)).mkdir(parents=True, exist_ok=True)
+        topic_model.save(self._dir + 'BERTopic/{}/{}_nouns_model'.format(self.community, self.community))
+        self.write_pickle_dic(tweets, self._dir + 'BERTopic/{}/{}_tweets'.format(self.community, self.community))
+        self.write_pickle_dic(topics, self._dir + 'BERTopic/{}/{}_topics'.format(self.community, self.community))
+        self.write_pickle_dic(timestamps, self._dir + 'BERTopic/{}/{}_timestamps'.format(self.community, self.community))
+        self.write_pickle_dic(embeddings, self._dir + 'BERTopic/{}/{}_embeddings'.format(self.community, self.community))
 
         return None
+
+    def write_pickle_dic(self, dic, name):
+        """
+        Save a dictionary/list/etc. to a pickle file on 
+        a local machine
+
+        Parameters
+        ----------
+            dic (dic): The dictionary you want to save (e.g. tokens_dic)
+            name (str): The name of the .pkl file
+
+        Returns
+        -------
+            None
+        """
+
+        dic_file = open("{}.pkl".format(name), "wb")
+        pickle.dump(dic, dic_file)
+        dic_file.close()
+
+        return None
+    
+    def read_pickle_dic(self, name): 
+        """
+        Read a pickled dictionary/list/etc. file on
+        a local machine
+
+        Parameters
+        ----------
+            name (str): The name of the .pkl file
+
+        Returns
+        -------
+            dic_in (dic): The loaded dictionary 
+        """
+
+        pickle_in = open("{}.pkl".format(name), "rb")
+        dic_in = pickle.load(pickle_in)
+        pickle_in.close()
+        
+        return dic_in
 
 """
 Instantiate generate_topics class and work through the following steps to obtain
@@ -447,7 +489,7 @@ topics for community data below.
 """
 
 # 0. Initialise instance variables
-community, _dir = 'Journalists', '/Users/timdouglas/Desktop/MPhil:PhD CompSci @ UCL/css_proj/' 
+community, _dir = 'Journalists', '' 
 # ScottishTeachers # IrishTeachers # Journalists
 
 # 1. Instantiate generate_topics class
@@ -459,11 +501,11 @@ bert.filter_users(threshold=2000)
 # 3. Get active members 
 members_df = bert.get_active_members()
 
-# # 4. Determine professionals from dataset
-filter_list = read_pickle_dic('{}_filter_list'.format(community))
+# 4. Determine professionals from dataset
+filter_list = bert.read_pickle_dic('{}_filter_list'.format(community))
 filtered_members = bert.filter_active_members(members_df, filter_list)
 
-# 5. Tokenize filterd self-declared professionals:
+# 5. Tokenize tweets for filtered self-declared professionals:
 activemembers_df = bert.get_tokens()
 
 # 6. Extract nouns from tokenised data to improve topic interpretability
@@ -478,5 +520,3 @@ topic_model, topics, filtered_tweets, embeddings = bert.compute_online_bertopic(
 
 # 9. Save BERTopic Topics
 bert.save_topic_model(topic_model, filtered_tweets, topics, timestamps, embeddings)
-
-debug2 = 0

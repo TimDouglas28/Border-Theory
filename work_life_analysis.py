@@ -10,9 +10,10 @@ import numpy as np
 import seaborn as sns
 import scipy.stats as stats
 import re
+import pickle
+import textwrap
 from datetime import datetime
 from numpy.linalg import norm
-from utils_calculations.utils import read_pickle_dic, write_pickle_dic, wrap_x_labels, wrap_y_labels
 from pydoc_data.topics import topics
 from pyexpat import model
 from bertopic import BERTopic
@@ -133,7 +134,7 @@ class work_life_analysis:
         """
 
         # 1. Read the original tweet data into a Pandas dataframe
-        orig = pd.read_csv(self._dir+'data/csvs/unprocessed_{}_tweets_active_members*.csv'.format(self.community), 
+        orig = pd.read_csv(self._dir+'unprocessed_{}_tweets_active_members*.csv'.format(self.community), 
             usecols=['author_id', 'tweet_id', 'tweet', 'created_at']) # 'location'
 
         # 2. Create a DataFrame object mapping tweets to their respective topics, for all required topics
@@ -143,7 +144,7 @@ class work_life_analysis:
         topic_doc = topic_doc.loc[topic_doc['Topic'].isin(tops), :]
 
         # 3. Read the transformed tweet data in as a dataframe (all filtered tweets containing nouns)
-        transformed = pd.read_csv(self._dir+'data/csvs/BERTopic/{}/{}_nouns_truncated.csv'.format(self.community, self.community),
+        transformed = pd.read_csv(self._dir+'{}/{}_nouns_truncated.csv'.format(self.community, self.community),
             usecols=['author_id', 'tweet_id', 'created_at', 'token_nouns'], lineterminator='\n'
         )
 
@@ -277,29 +278,7 @@ class work_life_analysis:
             ss_df = pd.DataFrame(ss[['time', 'tweet', 'author_id']])
             ss_df['time'] = pd.to_timedelta(ss_df['time']).dt.total_seconds()
             ss_labels.append(ss_df)
-        
-        # # 4. Compute DTW Barycenter (DBA) for work and life tweets. Optional.
-        # dba = [] # stores DBA results
-        # r = [] 
-        # for df in ss_labels:
-        #     # We need to handle exceptions where a user doens't tweet about w or l on a given day
-        #     try:
-        #         bary_in = [[val] for val in list(df['time'])]
-        #         dtw = dtw_barycenter_averaging(bary_in, max_iter=5)
-        #         dtw = reduce(lambda xs, ys: xs + ys, dtw)
-        #         df = df.append(pd.Series(dtw, index=['time']), ignore_index=True)
 
-        #         dba.append(df['time'].iloc[-1])
-        #         r.append(df)
-        #     except IndexError:
-        #         pass
-        #     continue
-        
-        # 4. Rename work and life columns in ss_labels
-        # ss_labels[0] = ss_labels[0].rename(columns={'time': 'work'})
-        # ss_labels[1] = ss_labels[1].rename(columns={'time': 'life'})
-
-        # Update (30/12/22):  
         # 4. Rename work, work_tweet, life and life_tweet columns in ss_labels
         ss_labels[0] = ss_labels[0].rename(columns={'time': 'work', 'tweet': 'work_tweet', 'author_id': 'work_author_id'})
         ss_labels[1] = ss_labels[1].rename(columns={'time': 'life', 'tweet': 'life_tweet', 'author_id': 'life_author_id'})
@@ -521,7 +500,7 @@ class work_life_analysis:
                 plt.xticks(fontsize=font_size)
                 plt.yticks(fontsize=font_size)
                 ax[i].set_title('{}'.format(periods[i]), fontsize=font_size)
-                plt.savefig('css_proj/outputs/wlb_plots/norm_frequency_comparison_plot_{}_{}_across_lockdowns.pdf'.format(community, k), format="pdf", bbox_inches='tight')
+                plt.savefig('norm_frequency_comparison_plot_{}_{}_across_lockdowns.pdf'.format(community, k), format="pdf", bbox_inches='tight')
     
     def get_violinplot(self, single_user, day, thresholds, user, topic_labels, inc_topics, remove_legend, norm, flex):
         """ 
@@ -801,14 +780,6 @@ class work_life_analysis:
             final['year'] = final['type'].apply(lambda x: x[-4:])
             final = final.sort_values(['year'], ascending=True)
 
-            # # NB: Compute below to find difference between times
-            # from datetime import datetime
-            # s1 = '12:44:36'
-            # s2 = '10:13:09' # for example
-            # FMT = '%H:%M:%S'
-            # tdelta = np.absolute(datetime.strptime(s2, FMT) - datetime.strptime(s1, FMT))
-            # val = str(timedelta(seconds=tdelta.seconds))
-
             # Permeability Calculation
             # p = final.groupby(final.index//2)['median_time'].diff(-1).dropna().reset_index(drop=True).abs()
             p = final.groupby(['type']).agg({'Q1': ['min', 'max'], 'Q3': ['min', 'max']})
@@ -906,34 +877,6 @@ class work_life_analysis:
                 swb = swb[['type', 'author_id', 'swb']]
                 sentiment_df.append(swb)
                 return sentiment_df
-
-        # for df in sentiment_df:
-        #     # Plotting - Find another home for this after submission of first draft
-        #     # First, rename type for clarity
-        #     df.loc[df['type'] == list(df['type'].unique())[0], 'type'] = '2019'
-        #     df.loc[df['type'] == list(df['type'].unique())[1], 'type'] = '2020 (Lockdown 1)'
-        #     df.loc[df['type'] == list(df['type'].unique())[2], 'type'] = '2021'
-        #     df.loc[df['type'] == list(df['type'].unique())[3], 'type'] = '2022'
-        #     plt.rcParams.update({'font.size': 14.5})
-        #     sns.set_palette("pastel")
-        #     fig, ax = plt.subplots(figsize=(9, 6)) # 7.5
-        #     sns.boxplot(y='swb', x='type', data=df,
-        #     saturation=0.6)
-        #     wrap_x_labels(ax, 10) 
-        #     ax.figure
-        #     plt.tight_layout()
-        #     plt.xlabel('Period')
-        #     plt.ylabel('Subjective Well-Being Score')
-
-        #     # To get black and white boxplots, iterate over boxes
-        #     for i,box in enumerate(ax.artists):
-        #         box.set_edgecolor('black')
-        #         box.set_facecolor('white')
-        #         # iterate over whiskers and median lines
-        #         for j in range(6*i,6*(i+1)):
-        #             ax.lines[j].set_color('black')
-            
-            # plt.savefig()
 
     def get_work_life_results(self, result, year, month, week, date_threshold, topic_labels, all_users=True, include_topics=False, single_period=False):
         """ 
@@ -1159,11 +1102,11 @@ class work_life_analysis:
                     # iterate over whiskers and median lines
                     for j in range(6*i,6*(i+1)):
                         axs[1].lines[j].set_color('black')
-                wrap_x_labels(axs[1], 12) 
+                self.wrap_x_labels(axs[1], 12) 
                 axs[1].figure
 
                 fig.savefig(
-                "css_proj/outputs/wlb_plots/{}_{}_swb_all_lockdowns.pdf".format(community, label),
+                "{}_{}_swb_all_lockdowns.pdf".format(community, label),
                 # we need a bounding box in inches
                 bbox_inches=mtransforms.Bbox(
                     # This is in "figure fraction" for the bottom half
@@ -1177,7 +1120,7 @@ class work_life_analysis:
                 ),
             )
                 fig.savefig(
-                "css_proj/outputs/wlb_plots/{}_flex_all_lockdowns.pdf".format(community),
+                "{}_flex_all_lockdowns.pdf".format(community),
                 bbox_inches=mtransforms.Bbox([[0.06, 0.47], [0.91, 0.9]]).transformed(
                     fig.transFigure - fig.dpi_scale_trans
                 ),
@@ -1192,14 +1135,14 @@ class work_life_analysis:
                 # iterate over whiskers and median lines
                 for j in range(6*i,6*(i+1)):
                     axs[1].lines[j].set_color('black')
-            wrap_x_labels(axs[1], 12) 
+            self.wrap_x_labels(axs[1], 12) 
             axs[1].figure
 
         def get_axis_limits(ax, scale=.9):
             return ax.get_xlim()[1]*scale, ax.get_ylim()[1]*scale
 
         fig.savefig(
-            "css_proj/outputs/wlb_plots/{}_swb_all_lockdowns.pdf".format(community),
+            "{}_swb_all_lockdowns.pdf".format(community),
             # we need a bounding box in inches
             bbox_inches=mtransforms.Bbox(
                 # This is in "figure fraction" for the bottom half
@@ -1214,7 +1157,7 @@ class work_life_analysis:
         )
 
         fig.savefig(
-            "css_proj/outputs/wlb_plots/{}_flex_all_lockdowns.pdf".format(community),
+            "{}_flex_all_lockdowns.pdf".format(community),
             bbox_inches=mtransforms.Bbox([[0.06, 0.47], [0.91, 0.9]]).transformed(
                 fig.transFigure - fig.dpi_scale_trans
             ),
@@ -1265,6 +1208,43 @@ class work_life_analysis:
             return y, l3_months, w, l3_thresh,
         elif all_lockdown_info:
             return [[y, l1_months, w, l1_thresh], [y, l2_months, w, l2_thresh], [y, l3_months, w, l3_thresh]]
+        
+    def wrap_x_labels(self, ax, width, break_long_words=False):
+        labels = []
+        for label in ax.get_xticklabels():
+            text = label.get_text()
+            labels.append(textwrap.fill(text, width=width,
+                        break_long_words=break_long_words))
+        ax.set_xticklabels(labels, rotation=0)
+
+# NB: Additional functions to enable the analysis
+def q1(x):
+    # return bottom 25% quantile of some data, x
+    return x.quantile(0.25)
+
+def q3(x):
+     # return top 75% quantile of some data, x
+    return x.quantile(0.75)
+
+def read_pickle_dic(name): 
+    """
+    Read a pickled dictionary/list/etc. file on
+    a local machine
+
+    Parameters
+    ----------
+        name (str): The name of the .pkl file
+
+    Returns
+    -------
+        dic_in (dic): The loaded dictionary 
+    """
+
+    pickle_in = open("{}.pkl".format(name), "rb")
+    dic_in = pickle.load(pickle_in)
+    pickle_in.close()
+    
+    return dic_in
 
 """
 Instantiate topic_analysis class below
@@ -1273,12 +1253,12 @@ Instantiate topic_analysis class below
 # 0. Initialise instance variables
 # NB: Choose which community to run the analysis on
 community = 'Journalists' # ScottishTeachers # IrishTeachers # Journalists
-_dir = '/Users/timdouglas/Desktop/MPhil:PhD CompSci @ UCL/css_proj/'
-bertmodel = BERTopic.load(_dir + '/BERTopic/{}/{}_nouns_model'.format(community, community))
-tweets = read_pickle_dic(_dir + '/BERTopic/{}/{}_tweets'.format(community, community))
-topics = read_pickle_dic(_dir + '/BERTopic/{}/{}_topics'.format(community, community))
-timestamps = read_pickle_dic(_dir + '/BERTopic/{}/{}_timestamps'.format(community, community))
-embeddings = read_pickle_dic(_dir + '/BERTopic/{}/{}_embeddings'.format(community, community))
+_dir = ''
+bertmodel = BERTopic.load(_dir + 'BERTopic/{}/{}_nouns_model'.format(community, community))
+tweets = read_pickle_dic(_dir + 'BERTopic/{}/{}_tweets'.format(community, community))
+topics = read_pickle_dic(_dir + 'BERTopic/{}/{}_topics'.format(community, community))
+timestamps = read_pickle_dic(_dir + 'BERTopic/{}/{}_timestamps'.format(community, community))
+embeddings = read_pickle_dic(_dir + 'BERTopic/{}/{}_embeddings'.format(community, community))
 
 # 1. Instantiate topic_analysis class
 wl = work_life_analysis(_dir, community, bertmodel, tweets, topics, timestamps, embeddings)
@@ -1324,14 +1304,6 @@ for k, v in label_dict.items():
 result = wl.transform_data(orig_merge, list(labels.get('work').keys()), 
 list(labels.get('life').keys())) # orig_merge # utc_offset
 
-def q1(x):
-    # return bottom 25% quantile of some data, x
-    return x.quantile(0.25)
-
-def q3(x):
-     # return top 75% quantile of some data, x
-    return x.quantile(0.75)
-
 """
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 WORK-LIFE TWEET ACTIVITY ANALYSIS 
@@ -1357,7 +1329,7 @@ for lockdown in range(len(all_lockdowns)):
                                                         all_lockdowns[lockdown][2], all_lockdowns[lockdown][3], topic_labels)
     swb_list.append(wl.compute_swb(comparison_results_final, wd_vs_we=True, work_vs_life=False))
     comparison_results_final_list.append(comparison_results_final)
-    perm, flex = wl.compute_perm_flex(q1, q3, comparison_results_final, w=False, wd_vs_we=True) # comparison_results
+    perm, flex = wl.compute_perm_flex(q1, q3, comparison_results_final, wd_vs_we=True) # comparison_results
     border_permeability.append(perm)
 
 # 3. Plot tweet frequency (IQR boxplots) and subjective well-being (boxplots) for each lockdown period.
@@ -1366,9 +1338,9 @@ wl.plot_perm_flex_swb(comparison_results_final_list, swb_list, community, work_v
 # 4. Plot the normalised work-life tweet frequency for all lockdown periods.
 wl.plot_work_norm_frequency(comparison_results_final_list, community)
 
-# # 5. Compute permeability and flexibility of tweet frequency
-# # NB: This is used for Tables 8 and 9 in the paper (permeability values per period).
-# perm, flex = wl.compute_perm_flex(q1, q3, comparison_results_final, w, wd_vs_we=True) # comparison_results
+# 5. Compute permeability and flexibility of tweet frequency
+# NB: This is used for Tables 9, 10, and 11 in the paper (permeability values per period).
+perm, flex = wl.compute_perm_flex(q1, q3, comparison_results_final, wd_vs_we=True) # comparison_results
 
 # OPTIONAL
 # Compute statistical tests
