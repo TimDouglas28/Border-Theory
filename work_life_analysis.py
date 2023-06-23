@@ -20,7 +20,6 @@ from bertopic import BERTopic
 from functools import reduce
 from numpy import mean
 from collections import defaultdict
-from joypy import joyplot
 from octis.evaluation_metrics.diversity_metrics import TopicDiversity
 from octis.evaluation_metrics.topic_significance_metrics import KL_uniform
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
