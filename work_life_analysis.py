@@ -1268,7 +1268,8 @@ topic_diversity, topic_significance = wl.evaluate_model(bertmodel)
 # 2. Map topics back to original data
 orig_merge = wl.map_topics()
 
-# OPTIONAL. Define topic labels. NB: Work-life frequency results can still be computed without topic labels
+# 3. Define topic labels. After manually inspecting the BERTopic topics, you must group topics into work and life by 
+# modifying the relevant dictionary below.
 if community == 'ScottishTeachers':
     labels = {
         'work': 
