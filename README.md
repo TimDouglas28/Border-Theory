@@ -15,7 +15,7 @@ There are two main files in this repository: topic_modelling.py and work_life_an
     * Journalists dir: Stores extracted nouns data.
     * pickles dir: Stores pickled files used as input into the BERTopic model.
     * BERTopic dir: Stores pickled BERTopic output files for analysis in work_life_analysis.py.
-2. Run work_life_analysis.py to produce the results shown in the paper. Multiple files will be created during this run:
+2. Run work_life_analysis.py to produce the results shown in the paper. NB: You will have to manually inspect the BERTopic topics before grouping them into work or life categories (as described on lin 1271 of script, '3. Define topic labels'). Multiple files will be created during this run:
     * 'Journalists_swb_all_lockdowns.pdf': The subjective well-being plots for journalists.
     * 'Journalists_flex_all_lockdowns.pdf': The flexibility plots for journalists.
     * 'norm_frequency_comparison_plot_Journalists_lockdowns_across_lockdowns.pdf': The normalized
