@@ -23,4 +23,4 @@ There are two main files in this repository: topic_modelling.py and work_life_an
     * 'norm_frequency_comparison_plot_Journalists_baselines_across_lockdowns.pdf': The normalized
         frequency plots for journalists during baseline period.
 ## Requirements for code
-The requirements can be found [here](https://github.com/TimDouglas28/Border-Theory/blob/main/requirements.txt)
+The requirements (with python >= 3.9) can be found [here](https://github.com/TimDouglas28/Border-Theory/blob/main/requirements.txt)
