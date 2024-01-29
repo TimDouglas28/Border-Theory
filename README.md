@@ -1,7 +1,7 @@
 # Border-Theory
 A Computational Linguistic Approach to Study Border Theory at Scale
 
-Repository containing the data and code for running the work-life analysis in 'A Computational Linguistic Approach to Study Border Theory at Scale'
+Public repository containing the data and code for running the work-life analysis in "A Computational Linguistic Approach to Study Border Theory at Scale" (CSCW'24).
 
 ## Instructions
 There are two main files in this repository: topic_modelling.py and work_life_analysis.py. These files must be ran in order.
